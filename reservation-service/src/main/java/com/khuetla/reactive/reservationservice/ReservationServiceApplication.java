@@ -4,7 +4,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.reactivestreams.Publisher;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
@@ -15,10 +14,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.server.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -46,14 +41,13 @@ public class ReservationServiceApplication {
     @Bean
     @RefreshScope
     RouterFunction routes(@Value("${message}") String message,
-                          ReservationRepository repository) {
+                          ReservationHandler handler) {
         return RouterFunctions
                 .route(GET("/message"),
                         request -> ok().body(Mono.just(message), String.class))
-                .andRoute(GET("/reservations"),
-                        request -> ok().body(repository.findAll(), Reservation.class))
-                .andRoute(GET("/reservations/{id}"),
-                        request -> ok().body(repository.findById(request.pathVariable("id")), Reservation.class));
+
+                .andRoute(GET("/reservations"), handler::getReservations)
+                .andRoute(GET("/reservations/{id}"), handler::getReservationById);
     }
 
     public static void main(String[] args) {
@@ -63,6 +57,24 @@ public class ReservationServiceApplication {
 
 
 @Component
+class ReservationHandler {
+
+    private final ReservationRepository reservationRepository;
+
+    ReservationHandler(ReservationRepository reservationRepository) {
+        this.reservationRepository = reservationRepository;
+    }
+
+    Mono<ServerResponse> getReservations(ServerRequest request) {
+        return ok().body(reservationRepository.findAll(), Reservation.class);
+    }
+
+    Mono<ServerResponse> getReservationById(ServerRequest request) {
+        return ok().body(reservationRepository.findById(request.pathVariable("id")), Reservation.class);
+    }
+}
+
+
 interface ReservationRepository extends ReactiveMongoRepository<Reservation, String> {
 
 }
