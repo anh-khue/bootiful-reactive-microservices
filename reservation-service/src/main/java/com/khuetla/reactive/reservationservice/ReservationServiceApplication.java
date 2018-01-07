@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.reactive.function.server.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -36,6 +37,14 @@ public class ReservationServiceApplication {
                                         .flatMap(reservationRepository::save))
                         .thenMany(reservationRepository.findAll())
                         .subscribe(System.out::println);
+    }
+
+    @Bean
+    @RefreshScope
+    RouterFunction routes(@Value("${message}") String message) {
+        return RouterFunctions
+                .route(RequestPredicates.GET("/route/message"),
+                        request -> ServerResponse.ok().body(Mono.just(message), String.class));
     }
 
     public static void main(String[] args) {
