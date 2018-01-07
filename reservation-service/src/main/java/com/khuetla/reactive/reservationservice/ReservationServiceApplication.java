@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
+import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +22,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.server.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import static org.springframework.web.reactive.function.server.RequestPredicates.*;
+import static org.springframework.web.reactive.function.server.ServerResponse.*;
 
 @SpringBootApplication
 public class ReservationServiceApplication {
@@ -41,10 +45,15 @@ public class ReservationServiceApplication {
 
     @Bean
     @RefreshScope
-    RouterFunction routes(@Value("${message}") String message) {
+    RouterFunction routes(@Value("${message}") String message,
+                          ReservationRepository repository) {
         return RouterFunctions
-                .route(RequestPredicates.GET("/route/message"),
-                        request -> ServerResponse.ok().body(Mono.just(message), String.class));
+                .route(GET("/message"),
+                        request -> ok().body(Mono.just(message), String.class))
+                .andRoute(GET("/reservations"),
+                        request -> ok().body(repository.findAll(), Reservation.class))
+                .andRoute(GET("/reservations/{id}"),
+                        request -> ok().body(repository.findById(request.pathVariable("id")), Reservation.class));
     }
 
     public static void main(String[] args) {
@@ -53,45 +62,7 @@ public class ReservationServiceApplication {
 }
 
 
-@RestController
-@RefreshScope
-class MessageRestController {
-
-    private final String message;
-
-    MessageRestController(@Value("${message}") String message) {
-        this.message = message;
-    }
-
-    @GetMapping("/message")
-    Publisher<String> getMessage() {
-        return Mono.just(this.message);
-    }
-}
-
-
-@RestController
-@RequestMapping("/reservations")
-class ReservationApiRestController {
-
-    private final ReservationRepository reservationRepository;
-
-    ReservationApiRestController(ReservationRepository reservationRepository) {
-        this.reservationRepository = reservationRepository;
-    }
-
-    @GetMapping
-    Flux<Reservation> getReservations() {
-        return this.reservationRepository.findAll();
-    }
-
-    @GetMapping("{id}")
-    Mono<Reservation> getReservationIdBy(@PathVariable("id") String id) {
-        return this.reservationRepository.findById(id);
-    }
-}
-
-
+@Component
 interface ReservationRepository extends ReactiveMongoRepository<Reservation, String> {
 
 }
